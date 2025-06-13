@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Default values
+SCALE="640:-1"
+FPS=15
+SPEED=1.0
+QUALITY="medium"
+OUTPUT=""
+
+show_help() {
+    echo -e "${GREEN}MOV to GIF Converter for macOS${NC}"
+    echo "Usage: mov2gif [options] <input.mov>"
+    echo ""
+    echo "Options:"
+    echo "  -o <output.gif>    Specify output filename (default: input.gif)"
+    echo "  -s <width>         Set output width (height scales automatically)"
+    echo "  -f <fps>           Set frames per second (default: 15)"
+    echo "  -x <speed>         Speed multiplier (e.g., 2.0 for 2x speed)"
+    echo "  -q <quality>       Set quality: low, medium (default), high"
+    echo "  -h                 Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  mov2gif video.mov                     # Basic conversion"
+    echo "  mov2gif -x 2.0 video.mov              # 2x speed"
+    echo "  mov2gif -s 320 -f 10 video.mov        # 320px wide, 10fps"
+    echo "  mov2gif -q high -o animation.gif video.mov # High quality output"
+}
+
+# Parse arguments
+while getopts ":o:s:f:x:q:h" opt; do
+    case $opt in
+        o) OUTPUT="$OPTARG" ;;
+        s) SCALE="$OPTARG":-1 ;;
+        f) FPS="$OPTARG" ;;
+        x) SPEED="$OPTARG" ;;
+        q) QUALITY="$OPTARG" ;;
+        h) show_help; exit 0 ;;
+        \?) echo -e "${RED}Error: Invalid option -$OPTARG${NC}" >&2; exit 1 ;;
+        :) echo -e "${RED}Error: Option -$OPTARG requires an argument.${NC}" >&2; exit 1 ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+# Check if input file is provided
+if [ -z "$1" ]; then
+    echo -e "${RED}Error: No input file specified.${NC}"
+    show_help
+    exit 1
+fi
+
+INPUT="$1"
+if [ -z "$OUTPUT" ]; then
+    OUTPUT="${INPUT%.*}.gif"
+fi
+
+# Set quality parameters
+case $QUALITY in
+    low)
+        PALETTE_OPTS="stats_mode=diff"
+        DITHER_OPTS="bayer_scale=5"
+        ;;
+    medium)
+        PALETTE_OPTS="stats_mode=full"
+        DITHER_OPTS="dither=sierra2_4a"
+        ;;
+    high)
+        PALETTE_OPTS="stats_mode=full"
+        DITHER_OPTS="dither=floyd_steinberg"
+        ;;
+    *)
+        echo -e "${RED}Error: Invalid quality setting. Use low, medium, or high.${NC}"
+        exit 1
+        ;;
+esac
+
+echo -e "${YELLOW}Converting $INPUT to $OUTPUT${NC}"
+echo -e "Settings:"
+echo -e "  Scale: ${GREEN}$SCALE${NC}"
+echo -e "  FPS: ${GREEN}$FPS${NC}"
+echo -e "  Speed: ${GREEN}${SPEED}x${NC}"
+echo -e "  Quality: ${GREEN}$QUALITY${NC}"
+
+# Create palette for better quality
+echo -e "${YELLOW}Generating color palette...${NC}"
+ffmpeg -i "$INPUT" -vf "setpts=PTS/$SPEED,fps=$FPS,scale=$SCALE:flags=lanczos,palettegen=$PALETTE_OPTS" -y /tmp/palette.png 2>/dev/null
+
+# Generate GIF
+echo -e "${YELLOW}Creating GIF...${NC}"
+ffmpeg -i "$INPUT" -i /tmp/palette.png -filter_complex "setpts=PTS/$SPEED,fps=$FPS,scale=$SCALE:flags=lanczos[x];[x][1:v]paletteuse=$DITHER_OPTS" -y "$OUTPUT" 2>/dev/null
+
+# Cleanup
+rm /tmp/palette.png
+
+echo -e "${GREEN}Conversion complete!${NC}"
+echo -e "Output file: ${GREEN}$OUTPUT${NC}"
