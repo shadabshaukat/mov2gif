@@ -3,19 +3,21 @@ A Simple .mov to .gif converter for macOS
 
 ## Installation
 
-### First, install FFmpeg if you don't have it:
+### 1. First, install FFmpeg if you don't have it:
 
 ```
 brew install ffmpeg
 ```
 
-### Download and move the file mov2gif from this repo to your /usr/local/bin directory:
+### 2. Download and move the file mov2gif from this repo to your /usr/local/bin directory:
 
 ```
+git clone https://github.com/shadabshaukat/mov2gif.git
+cd mov2gif/
 sudo mv mov2gif /usr/local/bin
 ```
 
-### Make the mov2gif script executable
+### 3. Make the mov2gif script executable
 ```
 sudo chmod +x /usr/local/bin/mov2gif
 ```
