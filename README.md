@@ -42,6 +42,11 @@ mov2gif -s 320 -f 10 input.mov
 mov2gif -q high input.mov
 ```
 
+### Custom Filename Output :
+```
+mov2gif -x 2.0 -f 30 -q high -o custom_name.gif input.mov
+```
+
 ### Show help:
 ```
 mov2gif -h
